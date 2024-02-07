@@ -1,0 +1,511 @@
+/*************************************************************************************************
+*Group 15*(SCHOOL MANAGEMENT SYSTEM)
+* Name       : Harsh Patel , Srushti Patel
+* Email Id   : hpatel371@myseneca.ca, spatel664@myseneca.ca
+* Student ID : 114085228,117791228
+* Section    : NBB
+***************************************************************************************************/
+
+
+#include <iostream>
+#include <occi.h>
+#include <iomanip>
+#include <string>
+
+using oracle::occi::Environment;
+using oracle::occi::Connection;
+using oracle::occi::Statement;
+using oracle::occi::Type;
+using namespace oracle::occi;
+using namespace std;
+
+// Define the Teacher struct
+struct Teacher {
+    int teacherID;
+    string firstName;
+    string lastName;
+    string email;
+    string subjectName;
+    string phoneNum;
+};
+
+// Define the Student struct
+struct Student {
+    int studentId;
+    string firstName;
+    string lastName;
+    string email;
+    string grade;
+    int section;
+    string subjectName;
+};
+
+// Function declarations for Teacher
+void selectTeacher(Connection* conn);
+void insertTeacher(Connection* conn);
+void updateTeacher(Connection* conn);
+void deleteTeacher(Connection* conn);
+
+// Function declarations for Student
+void selectStudent(Connection* conn);
+void insertStudent(Connection* conn);
+void updateStudent(Connection* conn);
+void deleteStudent(Connection* conn);
+
+int main(void) {
+    
+    Environment* env = nullptr;
+    Connection* conn = nullptr;
+
+    // User Variables
+    string usr = "dbs311_233nbb17"; 
+    string pass = "56532194"; 
+    string srv = "myoracle12c.senecacollege.ca:1521/oracle12c"; 
+
+    int exit = 0;
+    int option;
+
+    try {
+        env = Environment::createEnvironment(Environment::DEFAULT);
+        conn = env->createConnection(usr, pass, srv);
+        cout << "*********Connection is Successful!**********" << endl << endl;
+
+        do {
+            cout << "-----------------SCHOOL MANAGEMENT SYSTEM --------------------" << endl;
+            cout << left << setw(4) << "1." << "TEACHER MANAGEMENT" << endl;
+            cout << left << setw(4) << "2." << "STUDENT MANAGEMENT" << endl;
+            cout << left << setw(4) << "0." << "Exit" << endl;
+
+            cout << "Enter an option: ";
+            cin >> option;
+
+            if (!cin.fail()) {
+                if (option == 1) {
+                    do {
+                        cout << "-----------------TEACHER MANAGEMENT --------------------" << endl;
+                        cout << left << setw(4) << "1." << "SELECT TEACHER BY ID" << endl;
+                        cout << left << setw(4) << "2." << "INSERT NEW TEACHER" << endl;
+                        cout << left << setw(4) << "3." << "UPDATE TEACHER DETAILS" << endl;
+                        cout << left << setw(4) << "4." << "DELETE TEACHER" << endl;
+                        cout << left << setw(4) << "0." << "Back to Main Menu" << endl;
+
+                        cout << "Enter an option: ";
+                        cin >> option;
+
+                        if (!cin.fail()) {
+                            switch (option) {
+                            case 1:
+                                selectTeacher(conn);
+                                break;
+                            case 2:
+                                insertTeacher(conn);
+                                break;
+                            case 3:
+                                updateTeacher(conn);
+                                break;
+                            case 4:
+                                deleteTeacher(conn);
+                                break;
+                            case 0:
+                                break;
+                            default:
+                                cout << "Invalid input. Please enter 0-4." << endl << endl;
+                            }
+                        }
+                        else {
+                            cout << "Invalid input. Please enter 0-4." << endl << endl;
+                            cin.clear();
+                            cin.ignore(2000, '\n');
+                        }
+
+                    } while (option != 0);
+                }
+                else if (option == 2) {
+                    do {
+                        cout << "-----------------STUDENT MANAGEMENT --------------------" << endl;
+                        cout << left << setw(4) << "1." << "SELECT STUDENT BY ID" << endl;
+                        cout << left << setw(4) << "2." << "INSERT NEW STUDENT" << endl;
+                        cout << left << setw(4) << "3." << "UPDATE STUDENT DETAILS" << endl;
+                        cout << left << setw(4) << "4." << "DELETE STUDENT" << endl;
+                        cout << left << setw(4) << "0." << "Back to Main Menu" << endl;
+
+                        cout << "Enter an option: ";
+                        cin >> option;
+
+                        if (!cin.fail()) {
+                            switch (option) {
+                            case 1:
+                                selectStudent(conn);
+                                break;
+                            case 2:
+                                insertStudent(conn);
+                                break;
+                            case 3:
+                                updateStudent(conn);
+                                break;
+                            case 4:
+                                deleteStudent(conn);
+                                break;
+                            case 0:
+                                break;
+                            default:
+                                cout << "Invalid input. Please enter 0-4." << endl << endl;
+                            }
+                        }
+                        else {
+                            cout << "Invalid input. Please enter 0-4." << endl << endl;
+                            cin.clear();
+                            cin.ignore(2000, '\n');
+                        }
+
+                    } while (option != 0);
+                }
+                else if (option == 0) {
+                    cout << "Thank you for using the school management system" << endl << endl;
+                    exit = 1;
+                }
+                else {
+                    cout << "Invalid input. Please enter 0-2." << endl << endl;
+                }
+            }
+            else {
+                cout << "Invalid input. Please enter 0-2." << endl << endl;
+                cin.clear();
+                cin.ignore(2000, '\n');
+            }
+
+            
+            if (exit == 0) {
+                cout << "Press enter to continue...";
+
+                if (!cin) cin.clear();
+
+                if (cin.peek() == '\n') {
+                    cin.get();
+                }
+
+                if (option != 1 && option != 2)
+                    cin.get();
+            }
+
+        } while (exit == 0);
+
+        env->terminateConnection(conn);
+        Environment::terminateEnvironment(env);
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+
+    return 0;
+}
+void selectStudent(Connection* conn) {
+    Student student;
+    int err = 0;
+
+    cout << "Student ID: ";
+    cin >> student.studentId;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN StudentSelect(:1, :2, :3, :4, :5, :6, :7, :8); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, student.studentId);
+        stmt->registerOutParam(3, Type::OCCISTRING, sizeof(student.firstName));
+        stmt->registerOutParam(4, Type::OCCISTRING, sizeof(student.lastName));
+        stmt->registerOutParam(5, Type::OCCISTRING, sizeof(student.email));
+        stmt->registerOutParam(6, Type::OCCIINT, sizeof(student.grade));
+        stmt->registerOutParam(7, Type::OCCISTRING, sizeof(student.section));
+        stmt->registerOutParam(8, Type::OCCISTRING, sizeof(student.subjectName));
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "****************************************************************************************" << endl;
+            cout << "Yes, the student ID exists " << endl;
+            cout << "****************************************************************************************" << endl;
+            cout << "First Name: " << student.firstName << endl;
+            cout << "Last Name: " << student.lastName << endl;
+            cout << "Email: " << student.email << endl;
+            cout << "Grade: " << student.grade << endl;
+            cout << "Section: " << student.section << endl;
+            cout << "Subject Name: " << student.subjectName << endl << endl;
+        }
+        else {
+            cout << "ERROR: The entered student ID doesn't exist" << endl;
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+
+void insertStudent(Connection* conn) {
+    Student student;
+    int err = 0;
+
+    cout << "Student ID: ";
+    cin >> student.studentId;
+    cout << "First Name: ";
+    cin >> student.firstName;
+    cout << "Last Name: ";
+    cin >> student.lastName;
+    cout << "Email: ";
+    cin >> student.email;
+    cout << "Grade: ";
+    cin >> student.grade;
+    cout << "Section: ";
+    cin >> student.section;
+    cout << "Subject Name: ";
+    cin >> student.subjectName;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN StudentInsert(:1, :2, :3, :4, :5, :6, :7, :8); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, student.studentId);
+        stmt->setString(3, student.firstName);
+        stmt->setString(4, student.lastName);
+        stmt->setString(5, student.email);
+        stmt->setString(6, student.grade);
+        stmt->setInt(7, student.section);
+        stmt->setString(8, student.subjectName);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+
+            cout << "ERROR: Unable to add the student" << endl;
+
+        }
+        else {
+            cout << "****************************************************************************************" << endl;
+            cout << "Student added successfully!" << endl;
+            cout << "****************************************************************************************" << endl << endl;
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+
+void updateStudent(Connection* conn) {
+    Student student;
+    int err = 0;
+
+    cout << "Student ID: ";
+    cin >> student.studentId;
+    cout << "New Section: ";
+    cin >> student.section;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN StudentUpdate(:1, :2, :3); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, student.studentId);
+        stmt->setInt(3, student.section);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "****************************************************************************************" << endl;
+            cout << "Student information updated successfully!" << endl;
+            cout << "****************************************************************************************" << endl << endl;
+        }
+        else {
+            cout << "ERROR: Unable to update the student information" << endl;
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+
+void deleteStudent(Connection* conn) {
+    Student student;
+    int err = 0;
+
+    cout << "Student ID: ";
+    cin >> student.studentId;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN StudentDelete(:1, :2); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, student.studentId);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "****************************************************************************************" << endl;
+            cout << "Student deleted successfully!" << endl;
+            cout << "****************************************************************************************" << endl << endl;
+        }
+        else {
+            cout << "ERROR: Unable to delete the student" << endl;
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+void selectTeacher(Connection* conn) {
+    Teacher teacher;
+    int err = 0;
+
+    cout << "Teacher ID: ";
+    cin >> teacher.teacherID;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN TeacherSelect(:1, :2, :3, :4, :5, :6, :7); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, teacher.teacherID);
+        stmt->registerOutParam(3, Type::OCCISTRING, sizeof(teacher.firstName));
+        stmt->registerOutParam(4, Type::OCCISTRING, sizeof(teacher.lastName));
+        stmt->registerOutParam(5, Type::OCCISTRING, sizeof(teacher.email));
+        stmt->registerOutParam(6, Type::OCCISTRING, sizeof(teacher.subjectName));
+        stmt->registerOutParam(7, Type::OCCISTRING, sizeof(teacher.phoneNum));
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "****************************************************************************************" << endl;
+            cout << "Yes, the teacher ID exists " << endl;
+            cout << "****************************************************************************************" << endl;
+            teacher.firstName = stmt->getString(3);
+            cout << "First Name: " << teacher.firstName << endl;
+
+            teacher.lastName = stmt->getString(4);
+            cout << "Last Name: " << teacher.lastName << endl;
+
+            teacher.email = stmt->getString(5);
+            cout << "Email: " << teacher.email << endl;
+
+            teacher.subjectName = stmt->getString(6);
+            cout << "Subject Name: " << teacher.subjectName << endl;
+
+            teacher.phoneNum = stmt->getString(7);
+            cout << "Phone Number: " << teacher.phoneNum << endl << endl;
+        }
+        else {
+            cout << "ERROR: The entered teacher ID doesn't exist" << endl;
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+void insertTeacher(Connection* conn) {
+    Teacher teacher;
+    int err = 0;
+
+    cout << "Teacher ID: ";
+    cin >> teacher.teacherID;
+    cout << "First Name: ";
+    cin >> teacher.firstName;
+    cout << "Last Name: ";
+    cin >> teacher.lastName;
+    cout << "Email: ";
+    cin >> teacher.email;
+    cout << "Subject Name: ";
+    cin >> teacher.subjectName;
+    cout << "Phone Number: ";
+    cin >> teacher.phoneNum;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN TeacherInsert(:1, :2, :3, :4, :5, :6, :7); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, teacher.teacherID);
+        stmt->setString(3, teacher.firstName);
+        stmt->setString(4, teacher.lastName);
+        stmt->setString(5, teacher.email);
+        stmt->setString(6, teacher.subjectName);
+        stmt->setString(7, teacher.phoneNum);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err == 0) {
+            cout << "\nERROR: Failed to insert teacher.The entered teacher ID may already exist.\n\n";
+        }
+        else {
+            cout << "SUCCESS: New Teacher inserted.\n\n";
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+void updateTeacher(Connection* conn) {
+    Teacher teacher;
+    int err = 0;
+
+    cout << "Teacher ID: ";
+    cin >> teacher.teacherID;
+    cout << "New Phone Number: ";
+    cin >> teacher.phoneNum;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN TeacherUpdate(:1, :2, :3); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, teacher.teacherID);
+        stmt->setString(3, teacher.phoneNum);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "\nSUCCESS: Teacher ID " << teacher.teacherID << " has been updated.\n\n";
+        }
+        else {
+            cout << "ERROR: Failed to update teacher ID " << teacher.teacherID << "\n\n";
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+void deleteTeacher(Connection* conn) {
+    Teacher teacher;
+    int err = 0;
+
+    cout << "Teacher ID: ";
+    cin >> teacher.teacherID;
+
+    try {
+        Statement* stmt = conn->createStatement();
+        stmt->setSQL("BEGIN TeacherDelete(:1, :2); END;");
+        stmt->registerOutParam(1, Type::OCCIINT, sizeof(err));
+        stmt->setNumber(2, teacher.teacherID);
+
+        stmt->executeUpdate();
+        err = stmt->getInt(1);
+
+        if (err > 0) {
+            cout << "\nSUCCESS: Teacher ID " << teacher.teacherID << " has been deleted.\n\n";
+        }
+        else {
+            cout << "ERROR: Failed to delete teacher ID " << teacher.teacherID << ". This data does not exist.\n\n";
+        }
+    }
+    catch (SQLException& sqlExcp) {
+        cout << sqlExcp.getErrorCode() << ": " << sqlExcp.getMessage();
+    }
+}
+
+
